@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مولد كود GEE لتحليل LST - نسخة محسنة</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css" rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        // sans: ['Cairo', 'sans-serif'], // خط عربي اختياري
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* --- التنسيقات العامة --- */
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: #f9fafb; /* gray-50 */
+        }
+        /* --- تنسيق الحقول --- */
+        input[type="text"], input[type="number"], select, textarea {
+            border-color: #d1d5db; /* gray-300 */
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        input[type="text"]:focus, input[type="number"]:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #3b82f6; /* blue-500 */
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+        }
+        /* --- تنسيق الأيقونات --- */
+        .icon {
+            display: inline-block;
+            width: 1.1em; height: 1.1em;
+            margin-left: 0.4em;
+            vertical-align: middle;
+        }
+        /* --- تنسيق منطقة عرض الكود (مع Prism.js) --- */
+        /* يتم تطبيق النمط الأساسي من prism-okaidia.min.css */
+        /* تعديلات إضافية إذا لزم الأمر */
+        pre[class*="language-"] {
+            border: 1px solid #374151; /* gray-700 */
+            border-radius: 0.375rem; /* rounded-md */
+            padding: 1rem !important; /* زيادة أهمية padding للتغلب على أنماط Prism */
+            margin-top: 0 !important; /* إزالة هامش Prism الافتراضي العلوي */
+            min-height: 350px;
+            overflow-x: auto;
+            direction: ltr;
+            text-align: left;
+        }
+        code[class*="language-"] {
+             font-family: 'Courier New', Courier, monospace;
+             line-height: 1.5;
+             font-size: 0.9em; /* تصغير حجم الخط قليلاً */
+        }
+        /* --- تنسيق الأزرار --- */
+        #copyBtn { background-color: #10b981; /* green-500 */ }
+        #copyBtn:hover { background-color: #059669; /* green-600 */ }
+        #copyBtn.copied { background-color: #059669; /* أخضر أغمق عند النسخ */ } /* نمط إضافي عند النسخ */
+        #generateBtn { background-color: #3b82f6; /* blue-500 */ }
+        #generateBtn:hover { background-color: #2563eb; /* blue-600 */ }
+        /* --- لإخفاء الـ textarea المؤقتة --- */
+        .visually-hidden {
+            position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+            overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+        }
+    </style>
+</head>
+<body class="p-6 md:p-10">
+
+    <div class="max-w-6xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg">
+        <h1 class="text-2xl md:text-3xl font-bold mb-8 text-center text-gray-800">
+            <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/settings-2.svg" alt="أيقونة إعدادات" class="icon text-blue-600">
+            مولد كود Google Earth Engine لتحليل LST (بنية الكود الأصلية)
+        </h1>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+            <div class="border border-gray-200 rounded-lg p-5 bg-gray-50">
+                <h2 class="text-lg font-semibold mb-4 text-gray-700 flex items-center">
+                    <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/map-pin.svg" alt="أيقونة دبوس خريطة" class="icon text-gray-500">
+                    1. المنطقة والزمن
+                </h2>
+                <div>
+                    <label for="countries" class="block text-sm font-medium text-gray-700 mb-1">الدول المستهدفة</label>
+                    <input type="text" id="countries" class="w-full p-2 border rounded-md text-sm" value="Egypt, Sudan">
+                    <p class="text-xs text-gray-500 mt-1">أدخل أسماء الدول بالإنجليزية مفصولة بفاصلة (,).</p>
+                </div>
+                <div class="mt-4">
+                    <label for="years" class="block text-sm font-medium text-gray-700 mb-1">السنوات المطلوبة</label>
+                    <input type="text" id="years" class="w-full p-2 border rounded-md text-sm" value="2000, 2005, 2010, 2015, 2020, 2024">
+                     <p class="text-xs text-gray-500 mt-1">أدخل السنوات مفصولة بفاصلة (,).</p>
+                </div>
+                <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                         <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/calendar-days.svg" alt="أيقونة تقويم" class="icon text-gray-500">
+                         النطاق الزمني داخل كل سنة
+                    </label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label for="startMonth" class="text-xs font-medium text-gray-600">شهر البداية:</label>
+                            <input type="number" id="startMonth" value="1" min="1" max="12" class="w-full p-2 border rounded-md text-sm">
+                        </div>
+                        <div>
+                            <label for="startDay" class="text-xs font-medium text-gray-600">يوم البداية:</label>
+                            <input type="number" id="startDay" value="1" min="1" max="31" class="w-full p-2 border rounded-md text-sm">
+                        </div>
+                        <div>
+                            <label for="endMonth" class="text-xs font-medium text-gray-600">شهر النهاية:</label>
+                            <input type="number" id="endMonth" value="12" min="1" max="12" class="w-full p-2 border rounded-md text-sm">
+                        </div>
+                        <div>
+                            <label for="endDay" class="text-xs font-medium text-gray-600">يوم النهاية:</label>
+                            <input type="number" id="endDay" value="31" min="1" max="31" class="w-full p-2 border rounded-md text-sm">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border border-gray-200 rounded-lg p-5 bg-gray-50">
+                 <h2 class="text-lg font-semibold mb-4 text-gray-700 flex items-center">
+                     <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/database.svg" alt="أيقونة قاعدة بيانات" class="icon text-gray-500">
+                     2. بيانات القمر الصناعي
+                 </h2>
+                 <div>
+                    <label for="collectionId" class="block text-sm font-medium text-gray-700 mb-1">معرف مجموعة البيانات</label>
+                    <input type="text" id="collectionId" class="w-full p-2 border rounded-md text-sm" value="MODIS/061/MOD11A2">
+                 </div>
+                 <div class="mt-4">
+                    <label for="bandName" class="block text-sm font-medium text-gray-700 mb-1">اسم النطاق (Band)</label>
+                    <input type="text" id="bandName" class="w-full p-2 border rounded-md text-sm" value="LST_Day_1km">
+                 </div>
+                 <div class="grid grid-cols-2 gap-3 mt-4">
+                     <div>
+                        <label for="scaleFactor" class="block text-sm font-medium text-gray-700 mb-1">معامل القياس</label>
+                        <input type="number" id="scaleFactor" value="0.02" step="0.001" class="w-full p-2 border rounded-md text-sm">
+                     </div>
+                     <div>
+                        <label for="offset" class="block text-sm font-medium text-gray-700 mb-1">قيمة الإزاحة</label>
+                        <input type="number" id="offset" value="273.15" step="0.01" class="w-full p-2 border rounded-md text-sm">
+                     </div>
+                 </div>
+
+                 <h2 class="text-lg font-semibold mt-6 mb-4 text-gray-700 flex items-center">
+                     <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/eye.svg" alt="أيقونة عين" class="icon text-gray-500">
+                     3. إعدادات العرض
+                 </h2>
+                 <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label for="visMin" class="block text-sm font-medium text-gray-700 mb-1">الحد الأدنى</label>
+                        <input type="number" id="visMin" value="10" class="w-full p-2 border rounded-md text-sm">
+                    </div>
+                    <div>
+                        <label for="visMax" class="block text-sm font-medium text-gray-700 mb-1">الحد الأقصى</label>
+                        <input type="number" id="visMax" value="50" class="w-full p-2 border rounded-md text-sm">
+                    </div>
+                 </div>
+                 <div class="mt-4">
+                    <label for="visPalette" class="block text-sm font-medium text-gray-700 mb-1">لوحة الألوان</label>
+                    <select id="visPalette" class="w-full p-2 border rounded-md text-sm bg-white">
+                        <option value="blue, cyan, green, yellow, orange, red" selected>أزرق - أحمر (افتراضي)</option>
+                        <option value="05014a, 081d58, 1c9099, 74c476, c7e9c0">بنفسجي - أخضر</option>
+                        <option value="black, blue, purple, cyan, green, yellow, red">قوس قزح</option>
+                        <option value="ffffff, f0f0f0, d9d9d9,bdbdbd, 969696, 737373, 525252, 252525, 000000">تدرج رمادي</option>
+                    </select>
+                 </div>
+            </div>
+
+            <div class="border border-gray-200 rounded-lg p-5 bg-gray-50">
+                 <h2 class="text-lg font-semibold mb-4 text-gray-700 flex items-center">
+                     <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/download.svg" alt="أيقونة تنزيل" class="icon text-gray-500">
+                     4. إعدادات التصدير
+                 </h2>
+                 <div>
+                    <label for="exportFolder" class="block text-sm font-medium text-gray-700 mb-1">مجلد التصدير في Drive</label>
+                    <input type="text" id="exportFolder" class="w-full p-2 border rounded-md text-sm" value="LST_Analysis">
+                 </div>
+                 <div class="mt-4">
+                    <label for="exportScale" class="block text-sm font-medium text-gray-700 mb-1">دقة التصدير (متر)</label>
+                    <input type="number" id="exportScale" value="250" min="1" class="w-full p-2 border rounded-md text-sm">
+                 </div>
+                 <div class="mt-4">
+                    <label for="exportCRS" class="block text-sm font-medium text-gray-700 mb-1">نظام الإحداثيات (CRS)</label>
+                    <input type="text" id="exportCRS" class="w-full p-2 border rounded-md text-sm" value="EPSG:4326">
+                 </div>
+             </div>
+        </div>
+
+        <div class="text-center mb-8">
+             <button id="generateBtn" class="px-6 py-3 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition duration-200 ease-in-out flex items-center justify-center mx-auto">
+                 <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/play.svg" alt="أيقونة تشغيل" class="icon text-white">
+                 توليد الكود
+             </button>
+        </div>
+
+        <div class="mt-8 border border-gray-200 rounded-lg p-5">
+            <label for="generatedCodeContainer" class="text-lg font-semibold text-gray-800 mb-3 block flex items-center">
+                 <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/code-2.svg" alt="أيقونة كود" class="icon text-gray-500">
+                 الكود المُولَّد لـ Google Earth Engine:
+            </label>
+            <div id="generatedCodeContainer" class="relative">
+                 <pre><code id="generatedCode" class="language-javascript">// اضغط على زر "توليد الكود" لتحديث الكود هنا</code></pre>
+                <button id="copyBtn" onclick="copyCode()" title="نسخ الكود" class="absolute top-2 left-2 px-3 py-1 text-white text-xs font-medium rounded shadow hover:shadow-md transition duration-200 ease-in-out flex items-center">
+                    <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/copy.svg" alt="أيقونة نسخ" class="icon text-white mr-1">
+                    <span id="copyBtnText">نسخ</span>
+                </button>
+            </div>
+             <p id="copyFeedback" class="text-sm mt-2 h-5 flex items-center"></p> </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script>
+        // --- الحصول على عناصر الواجهة ---
+        const generateBtn = document.getElementById('generateBtn');
+        const outputCodeElement = document.getElementById('generatedCode');
+        const copyFeedbackElement = document.getElementById('copyFeedback');
+        const copyBtn = document.getElementById('copyBtn');
+        const copyBtnText = document.getElementById('copyBtnText');
+        // تخزين محتوى زر النسخ الأصلي
+        const originalCopyBtnHTML = copyBtn.innerHTML;
+
+        // عناصر الإدخال مجمعة (لا تغيير هنا)
+        const inputs = {
+            countries: document.getElementById('countries'),
+            years: document.getElementById('years'),
+            startMonth: document.getElementById('startMonth'),
+            startDay: document.getElementById('startDay'),
+            endMonth: document.getElementById('endMonth'),
+            endDay: document.getElementById('endDay'),
+            collectionId: document.getElementById('collectionId'),
+            bandName: document.getElementById('bandName'),
+            scaleFactor: document.getElementById('scaleFactor'),
+            offset: document.getElementById('offset'),
+            visMin: document.getElementById('visMin'),
+            visMax: document.getElementById('visMax'),
+            visPaletteSelect: document.getElementById('visPalette'),
+            exportFolder: document.getElementById('exportFolder'),
+            exportScale: document.getElementById('exportScale'),
+            exportCRS: document.getElementById('exportCRS')
+        };
+
+        // --- وظيفة توليد الكود (بالهيكل الأصلي) ---
+        function generateGeeCode() {
+            // 1. قراءة القيم وتحويلها (لا تغيير هنا)
+            const targetCountriesStr = inputs.countries.value.trim();
+            const analysisYearsStr = inputs.years.value.trim();
+            const startMonth = parseInt(inputs.startMonth.value);
+            const startDay = parseInt(inputs.startDay.value);
+            const endMonth = parseInt(inputs.endMonth.value);
+            const endDay = parseInt(inputs.endDay.value);
+            const imageCollectionId = inputs.collectionId.value.trim();
+            const bandName = inputs.bandName.value.trim();
+            const scaleFactor = parseFloat(inputs.scaleFactor.value);
+            const offset = parseFloat(inputs.offset.value);
+            const visMin = parseFloat(inputs.visMin.value);
+            const visMax = parseFloat(inputs.visMax.value);
+            const selectedPaletteOption = inputs.visPaletteSelect.options[inputs.visPaletteSelect.selectedIndex];
+            const visPaletteStr = selectedPaletteOption.value;
+            const exportFolder = inputs.exportFolder.value.trim();
+            const exportScale = parseInt(inputs.exportScale.value);
+            const exportCRS = inputs.exportCRS.value.trim();
+
+            // التحقق الأساسي من المدخلات (لا تغيير هنا)
+            if (!targetCountriesStr || !analysisYearsStr || !imageCollectionId || !bandName || !exportFolder || !exportCRS || isNaN(startMonth) || isNaN(startDay) || isNaN(endMonth) || isNaN(endDay) || isNaN(scaleFactor) || isNaN(offset) || isNaN(visMin) || isNaN(visMax) || isNaN(exportScale)) {
+                outputCodeElement.textContent = "// خطأ: يرجى التأكد من ملء جميع الحقول بشكل صحيح.";
+                 // لا نستخدم Prism هنا لأنها رسالة خطأ وليست كود JS صالح
+                return;
+            }
+
+            const targetCountries = targetCountriesStr.split(',').map(c => `'${c.trim()}'`).filter(c => c !== "''");
+            const analysisYears = analysisYearsStr.split(',').map(y => parseInt(y.trim())).filter(y => !isNaN(y));
+            const visPalette = visPaletteStr.split(',').map(color => `'${color.trim()}'`);
+
+             if (targetCountries.length === 0 || analysisYears.length === 0) {
+                 outputCodeElement.textContent = "// خطأ: يجب تحديد دولة واحدة وسنة واحدة على الأقل.";
+                 // لا نستخدم Prism هنا
+                 return;
+             }
+
+            // دالة مساعدة لتنسيق الشهر واليوم (لا تغيير هنا)
+            const pad = (num) => String(num).padStart(2, '0');
+            const startDateStr = `year + '-${pad(startMonth)}-${pad(startDay)}'`;
+            const endDateStr = `year + '-${pad(endMonth)}-${pad(endDay)}'`;
+
+
+            // 2. بناء الكود النصي بالهيكل المطلوب (لا تغيير هنا)
+            let geeCode = `// Load country borders dataset
+var countries = ee.FeatureCollection('USDOS/LSIB_SIMPLE/2017');
+
+// Define the region of interest
+var region = countries.filter(ee.Filter.inList('country_na', [
+  ${targetCountries.join(',\n  ')}
+]));
+
+// Function to compute mean LST for the selected period of a specific year
+function getMeanLST(year) {
+  return ee.ImageCollection('${imageCollectionId}') // ${imageCollectionId.split('/').pop()}
+           .filterDate(${startDateStr}, ${endDateStr}) // Filter for specified period
+           .select('${bandName}') // Select the band
+           .mean() // Calculate mean
+           .multiply(${scaleFactor}) // Apply scale factor
+           .subtract(${offset}) // Apply offset (e.g., Kelvin to Celsius)
+           .clip(region) // Clip to region
+           .resample('bilinear'); // Resample (optional)
+}
+
+// Compute LST for selected years\n`;
+            analysisYears.forEach(year => {
+                geeCode += `var lst_${year} = getMeanLST('${year}');\n`;
+            });
+            geeCode += `
+// Visualization parameters for LST
+var lstVis = {
+  min: ${visMin}, // Minimum temperature
+  max: ${visMax}, // Maximum temperature
+  palette: [${visPalette.join(', ')}] // LST color palette
+};
+
+// Add LST layers to the map\n`;
+            geeCode += `Map.centerObject(region, 6);\n`;
+            analysisYears.forEach(year => {
+                geeCode += `Map.addLayer(lst_${year}, lstVis, 'LST ${year}');\n`;
+            });
+            geeCode += `
+// Export LST images to Google Drive
+function exportLST(image, year) {
+  Export.image.toDrive({
+    image: image.toFloat(), // Ensure image is float
+    description: 'LST_' + year, // Description for the exported file
+    folder: '${exportFolder}', // Google Drive folder name
+    region: region.geometry().bounds(), // Export region bounds
+    scale: ${exportScale}, // Set resolution in meters
+    crs: '${exportCRS}', // Coordinate Reference System
+    maxPixels: 1e13 // Allow large exports
+  });
+}
+
+// Export images (check Tasks tab in GEE to run)\n`;
+            analysisYears.forEach(year => {
+                geeCode += `exportLST(lst_${year}, '${year}');\n`;
+            });
+            geeCode += `\n// --- End of Generated Code ---`;
+
+
+            // 3. عرض الكود وتطبيق تمييز الصيغة
+            outputCodeElement.textContent = geeCode.trim();
+            // التأكد من أن Prism متاح قبل استدعائه
+            if (window.Prism) {
+                 Prism.highlightElement(outputCodeElement);
+            } else {
+                 console.warn("Prism.js لم يتم تحميله بعد.");
+            }
+        }
+
+        // --- وظيفة نسخ الكود (مع طريقة احتياطية وتأكيد مرئي) ---
+        function copyCode() {
+            const codeToCopy = outputCodeElement.textContent;
+            copyFeedbackElement.innerHTML = ''; // مسح الرسالة السابقة
+            copyBtn.innerHTML = originalCopyBtnHTML; // إعادة الزر لحالته الأصلية مبدئياً
+            copyBtn.classList.remove('copied');
+
+            // التحقق من وجود كود صالح للنسخ
+            if (!codeToCopy || codeToCopy.startsWith('// خطأ:') || codeToCopy.startsWith('// اضغط')) {
+                 copyFeedbackElement.innerHTML = `<img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/x.svg" alt="خطأ" class="icon text-red-500"> لا يوجد كود صالح للنسخ.`;
+                 copyFeedbackElement.style.color = '#ef4444'; // أحمر
+                 setTimeout(() => { copyFeedbackElement.innerHTML = ''; }, 3000);
+                 return;
+            }
+
+            // --- دالة لإظهار نجاح النسخ ---
+            function showCopySuccess() {
+                copyBtn.innerHTML = `<img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/check.svg" alt="تم" class="icon text-white"> <span id="copyBtnText">تم النسخ</span>`;
+                copyBtn.classList.add('copied'); // إضافة كلاس لتغيير النمط إذا أردنا
+                copyFeedbackElement.innerHTML = ''; // مسح أي رسالة خطأ سابقة
+                // إعادة الزر لحالته الأصلية بعد فترة
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalCopyBtnHTML;
+                    copyBtn.classList.remove('copied');
+                 }, 2000); // ثانيتين
+            }
+
+             // --- دالة لإظهار فشل النسخ ---
+            function showCopyFailure(message = 'فشل النسخ. حاول النسخ يدوياً.') {
+                 copyFeedbackElement.innerHTML = `<img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/x.svg" alt="خطأ" class="icon text-red-500"> ${message}`;
+                 copyFeedbackElement.style.color = '#ef4444'; // أحمر
+                 setTimeout(() => { copyFeedbackElement.innerHTML = ''; }, 3000);
+            }
+
+
+            // محاولة النسخ باستخدام الطريقة الحديثة (navigator.clipboard)
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(codeToCopy).then(() => {
+                    showCopySuccess(); // إظهار علامة الصح
+                }).catch(err => {
+                    console.warn('فشل النسخ بالطريقة الحديثة, محاولة الطريقة الاحتياطية:', err);
+                    copyUsingExecCommand(codeToCopy, showCopySuccess, showCopyFailure); // محاولة الطريقة الاحتياطية
+                });
+            } else {
+                // استخدام الطريقة الاحتياطية إذا كانت الطريقة الحديثة غير متاحة
+                console.warn('navigator.clipboard غير متاح أو السياق غير آمن, استخدام الطريقة الاحتياطية.');
+                copyUsingExecCommand(codeToCopy, showCopySuccess, showCopyFailure);
+            }
+        }
+
+        // --- الطريقة الاحتياطية للنسخ (execCommand) ---
+        function copyUsingExecCommand(textToCopy, successCallback, failureCallback) {
+            const textArea = document.createElement('textarea');
+            textArea.value = textToCopy;
+            textArea.classList.add('visually-hidden'); // استخدام الكلاس المعرف في CSS
+            document.body.appendChild(textArea);
+            textArea.select();
+
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    successCallback(); // استدعاء دالة النجاح لإظهار علامة الصح
+                } else {
+                    failureCallback(); // استدعاء دالة الفشل
+                    console.error('فشل النسخ باستخدام execCommand');
+                }
+            } catch (err) {
+                failureCallback(); // استدعاء دالة الفشل
+                console.error('خطأ أثناء النسخ باستخدام execCommand:', err);
+            }
+
+            document.body.removeChild(textArea); // إزالة العنصر المؤقت
+        }
+
+
+        // --- ربط الأحداث ---
+        generateBtn.addEventListener('click', generateGeeCode);
+
+        // --- توليد الكود مبدئياً عند تحميل الصفحة وتطبيق التمييز ---
+        document.addEventListener('DOMContentLoaded', () => {
+            generateGeeCode(); // توليد الكود
+             // التأكد من أن Prism متاح قبل استدعائه (قد يحتاج لبعض الوقت للتحميل)
+            setTimeout(() => {
+                if (window.Prism) {
+                     Prism.highlightElement(outputCodeElement);
+                } else {
+                     console.warn("Prism.js لم يتم تحميله بعد عند تحميل الصفحة.");
+                }
+            }, 100); // تأخير بسيط لضمان تحميل Prism
+        });
+
+
+    </script>
+
+</body>
+</html>
+
+
+
